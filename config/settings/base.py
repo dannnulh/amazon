@@ -56,6 +56,7 @@ LOCAL_APPS = [
     # custom users app
     'src.users.apps.UsersConfig',
     # Your stuff: custom apps go here
+    'src.amazon.apps.AmazonConfig',
 ]
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -260,7 +261,7 @@ SOCIALACCOUNT_ADAPTER = 'src.users.adapters.SocialAccountAdapter'
 # Select the correct user model
 AUTH_USER_MODEL = 'users.User'
 LOGIN_REDIRECT_URL = 'users:redirect'
-LOGIN_URL = 'account_login'
+LOGIN_URL = 'account_logisn'
 
 # SLUGLIFIER
 AUTOSLUG_SLUGIFY_FUNCTION = 'slugify.slugify'
