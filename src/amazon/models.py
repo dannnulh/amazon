@@ -38,6 +38,10 @@ class Item(TimeStampedModel):
     def __unicode__(self):
         return self.asin1
 
+    @property
+    def link(self):
+        return u'https://www.amazon.co.uk/dp/%s' % self.asin1
+
 
 class Review(TimeStampedModel):
     id = models.CharField(max_length=255, primary_key=True)
@@ -48,6 +52,11 @@ class Review(TimeStampedModel):
     comment_count = models.IntegerField(default=0)
     post_date = models.DateField()
     rating = models.FloatField(default=5.0)
+    send_notification = models.BooleanField(default=False)
 
     def __unicode__(self):
         return u'%s - %s' % (self.author, self.title)
+
+    @property
+    def link(self):
+        return u'https://www.amazon.co.uk/gp/customer-reviews/%s/' % self.id

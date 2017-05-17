@@ -122,6 +122,21 @@ def _save_item(item, raw):
     review.save()
 
 
+def _parse_total_review_count(asin):
+    total_review_count = 0
+    amazon_url = 'https://www.amazon.co.uk/product-reviews/%s/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&reviewerType=all_reviews&showViewpoints=1&sortBy=recent&pageNumber=1&filterByStar=all_stars' % asin
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'}
+    page = requests.get(amazon_url, headers=headers)
+    parser = html.fromstring(page.text)
+
+    TOTAL_REVIEWS = '//span[@data-hook="total-review-count"]/text()'
+    total_reviews = parser.xpath(TOTAL_REVIEWS)
+    if total_reviews:
+        total_review_count = int(total_reviews[0])
+    return total_review_count
+
+
 def _parse_review_data_page(asin):
     total_pages = 1
     amazon_url = 'https://www.amazon.co.uk/product-reviews/%s/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&reviewerType=all_reviews&showViewpoints=1&sortBy=recent&pageNumber=1&filterByStar=all_stars' % asin
@@ -218,15 +233,17 @@ def get_item_new_reviews(item):
     if not item_reviews:
         get_item_all_reviews(item)
     else:
-        total_pages = _parse_review_data_page(asin)
-        for page_number in range(1, total_pages + 1):
-            amazon_reviews = _parse_review_data(asin, page_number)
-            amazon_reviews_id = [r['id'] for r in amazon_reviews]
-            reviews_id_db = Review.objects.filter(item=item, id__in=amazon_reviews_id)
-            if reviews_id_db.count() == len(amazon_reviews):
-                break
-            for raw in amazon_reviews:
-                _save_item(item, raw)
+        amazon_total_reviews = _parse_total_review_count(asin)
+        if item_reviews.count() < amazon_total_reviews:
+            total_pages = _parse_review_data_page(asin)
+            for page_number in range(1, total_pages + 1):
+                amazon_reviews = _parse_review_data(asin, page_number)
+                amazon_reviews_id = [r['id'] for r in amazon_reviews]
+                reviews_id_db = Review.objects.filter(item=item, id__in=amazon_reviews_id)
+                if reviews_id_db.count() == len(amazon_reviews):
+                    break
+                for raw in amazon_reviews:
+                    _save_item(item, raw)
 
 
 def get_item_all_reviews(item):
@@ -240,3 +257,24 @@ def get_item_all_reviews(item):
         _save_item(item, raw)
 
     return reviews
+
+
+def send_slack_notification():
+    for review in Review.objects.filter(rating__lt=4.0, send_notification=False):
+        text = 'New critical review\n```Item:%s\nItem Link:%s\nAuthor:%s\nTitle:%s\nPosted Date:%s\nRating:%s\nLink:%s```' % (
+            review.item.item_name, review.item.link, review.author, review.title, review.post_date, review.rating, review.link
+        )
+        send_slack_dm('dev-dan', text)
+        review.send_notification = True
+        review.save()
+
+
+def send_slack_dm(slack_user_id, text):
+    url = 'https://slack.com/api/chat.postMessage'
+    params = {
+        'token': 'xoxp-10174825767-15913840452-75138061303-aceae2a1df',
+        'channel': slack_user_id,
+        'text': text
+    }
+    resp = requests.post(url, params)
+    return resp
