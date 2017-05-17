@@ -22,7 +22,7 @@ class Item(TimeStampedModel):
     zshop_category1 = models.CharField(max_length=255, null=True, blank=True)
     zshop_browse_path = models.CharField(max_length=255, null=True, blank=True)
     zshop_storefront_feature = models.CharField(max_length=255, null=True, blank=True)
-    asin1 = models.CharField(max_length=255)
+    asin1 = models.CharField(max_length=255, db_index=True)
     asin2 = models.CharField(max_length=255, null=True, blank=True)
     asin3 = models.CharField(max_length=255, null=True, blank=True)
     will_ship_internationally = models.CharField(max_length=255, null=True, blank=True)
@@ -37,3 +37,17 @@ class Item(TimeStampedModel):
 
     def __unicode__(self):
         return self.asin1
+
+
+class Review(TimeStampedModel):
+    id = models.CharField(max_length=255, primary_key=True)
+    item = models.ForeignKey(Item)
+    author = models.CharField(max_length=255)
+    title = models.CharField(max_length=255)
+    content = models.TextField(null=True, blank=True)
+    comment_count = models.IntegerField(default=0)
+    post_date = models.DateField()
+    rating = models.FloatField(default=5.0)
+
+    def __unicode__(self):
+        return u'%s - %s' % (self.author, self.title)

@@ -1,9 +1,12 @@
 import StringIO
 import csv
+import requests
+from lxml import html
 from time import sleep
 from mws import mws
+from dateutil import parser as dateparser
 
-from .models import Item
+from .models import Item, Review
 
 
 def _get_float(value, default=None):
@@ -25,12 +28,170 @@ def _get_int(value, default=None):
 
 
 def _decode(value):
-    print '----------'
-    print value
     return value.decode('utf-8', errors='ignore')
 
 
-def get_amazon_data():
+def _save_items(reader):
+    for row in reader:
+        row = map(_decode, row)
+        asin1 = row[16]
+        try:
+            item = Item.objects.get(asin1=asin1)
+            item.item_name = row[0]
+            item.item_description = row[1]
+            item.listing_id = row[2]
+            item.seller_sku = row[3]
+            item.price = _get_float(row[4], 0.0)
+            item.quantity = _get_int(row[5])
+            item.open_date = row[6]
+            item.image_url = row[7]
+            item.item_is_marketplace = row[8]
+            item.product_id_type = row[9]
+            item.zshop_shipping_fee = _get_float(row[10])
+            item.item_note = row[11]
+            item.item_condition = row[12]
+            item.zshop_category1 = row[13]
+            item.zshop_browse_path = row[14]
+            item.zshop_storefront_feature = row[15]
+            item.asin1 = row[16]
+            item.asin2 = row[17]
+            item.asin3 = row[18]
+            item.will_ship_internationally = row[19]
+            item.expedited_shipping = row[20]
+            item.zshop_boldface = row[21]
+            item.product_id = row[22]
+            item.bid_for_featured_placement = row[23]
+            item.add_delete = row[24]
+            item.pending_quantity = _get_int(row[25])
+            item.fulfillment_channel = row[26]
+            item.merchant_shipping_group = row[27]
+        except Item.DoesNotExist:
+            item = Item(
+                item_name=row[0],
+                item_description=row[1],
+                listing_id=row[2],
+                seller_sku=row[3],
+                price=_get_float(row[4], 0.0),
+                quantity=_get_int(row[5]),
+                open_date=row[6],
+                image_url=row[7],
+                item_is_marketplace=row[8],
+                product_id_type=row[9],
+                zshop_shipping_fee=_get_float(row[10]),
+                item_note=row[11],
+                item_condition=row[12],
+                zshop_category1=row[13],
+                zshop_browse_path=row[14],
+                zshop_storefront_feature=row[15],
+                asin1=row[16],
+                asin2=row[17],
+                asin3=row[18],
+                will_ship_internationally=row[19],
+                expedited_shipping=row[20],
+                zshop_boldface=row[21],
+                product_id=row[22],
+                bid_for_featured_placement=row[23],
+                add_delete=row[24],
+                pending_quantity=_get_int(row[25]),
+                fulfillment_channel=row[26],
+                merchant_shipping_group=row[27]
+            )
+        item.save()
+
+
+def _save_item(item, raw):
+    try:
+        review = Review.objects.get(item=item, id=raw['id'])
+        review.author = raw['author']
+        review.title = raw['title']
+        review.content = raw['content']
+        review.comment_count = _get_int(raw['comment_count'], 0)
+        review.post_date = dateparser.parse(raw['post_date']).date()
+        review.rating = _get_float(raw['rating'], 5.0)
+    except Review.DoesNotExist:
+        review = Review(
+            item=item,
+            id=raw['id'],
+            author=raw['author'],
+            title=raw['title'],
+            content=raw['content'],
+            comment_count=_get_int(raw['comment_count'], 0),
+            post_date=dateparser.parse(raw['post_date']).date(),
+            rating=_get_float(raw['rating'], 5.0),
+        )
+    review.save()
+
+
+def _parse_review_data_page(asin):
+    total_pages = 1
+    amazon_url = 'https://www.amazon.co.uk/product-reviews/%s/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&reviewerType=all_reviews&showViewpoints=1&sortBy=recent&pageNumber=1&filterByStar=all_stars' % asin
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'}
+    page = requests.get(amazon_url, headers=headers)
+    parser = html.fromstring(page.text)
+
+    PAGINATION_BAR = '//div[@id="cm_cr-pagination_bar"]'
+    pagination_bar = parser.xpath(PAGINATION_BAR)
+    if pagination_bar:
+        PAGINATION_NUMBERS = './/li[@data-reftag="cm_cr_arp_d_paging_btm"]/a/text()'
+        pagination_numbers = pagination_bar[0].xpath(PAGINATION_NUMBERS)
+        if pagination_numbers:
+            total_pages = int(pagination_numbers[-1])
+    return total_pages
+
+
+def _parse_review_data(asin, page_number=1):
+    amazon_url = 'https://www.amazon.co.uk/product-reviews/%s/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&reviewerType=all_reviews&showViewpoints=1&sortBy=recent&pageNumber=%s&filterByStar=all_stars' % (
+        asin, page_number)
+    print amazon_url
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'}
+    page = requests.get(amazon_url, headers=headers)
+    parser = html.fromstring(page.text)
+
+    REVIEW_LIST = '//div[@data-hook="review"]'
+    reviews_list = []
+    reviews = parser.xpath(REVIEW_LIST)
+    for review in reviews:
+        XPATH_ID = '@id'
+        XPATH_RATING = './/i[@data-hook="review-star-rating"]//text()'
+        XPATH_REVIEW_HEADER = './/a[@data-hook="review-title"]//text()'
+        XPATH_REVIEW_POSTED_DATE = './/a[contains(@href,"/profile/")]/parent::span/following-sibling::span/text()'
+        XPATH_REVIEW_TEXT = './/span[@data-hook="review-body"]//text()'
+        XPATH_REVIEW_COMMENTS = './/span[@class="review-comment-total"]//text()'
+        XPATH_AUTHOR = './/a[contains(@href,"/profile/")]/parent::span//text()'
+        raw_review_id = review.xpath(XPATH_ID)
+        raw_review_author = review.xpath(XPATH_AUTHOR)
+        raw_review_rating = review.xpath(XPATH_RATING)
+        raw_review_header = review.xpath(XPATH_REVIEW_HEADER)
+        raw_review_posted_date = review.xpath(XPATH_REVIEW_POSTED_DATE)
+        raw_review_text = review.xpath(XPATH_REVIEW_TEXT)
+        raw_review_comments = review.xpath(XPATH_REVIEW_COMMENTS)
+
+        # cleaning data
+        id = ''.join(raw_review_id)
+        rating = ''.join(raw_review_rating).replace('out of 5 stars', '')
+        title = ' '.join(' '.join(raw_review_header).split())
+        content = ' '.join(' '.join(raw_review_text).split())
+        post_date = dateparser.parse(''.join(raw_review_posted_date)).strftime('%d %b %Y')
+        author = ' '.join(' '.join(raw_review_author).split()).strip('By').strip()
+        comment_count = ''.join(raw_review_comments)
+
+        review_dict = {
+            'id': id,
+            'comment_count': comment_count,
+            'content': content,
+            'post_date': post_date,
+            'title': title,
+            'rating': rating,
+            'author': author
+
+        }
+        reviews_list.append(review_dict)
+    return reviews_list
+
+
+def get_items():
     x = mws.Reports(access_key='AKIAIJBJ3KDB22JYZTHA', secret_key='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',
                     account_id='A1B4GJWW9XJ35M', region='UK')
 
@@ -46,45 +207,36 @@ def get_amazon_data():
 
     f = StringIO.StringIO(csv_string)
     reader = csv.reader(f, delimiter='\t')
-    with open('report.csv', 'wb') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',')
-        for row in reader:
-            writer.writerow(row)
+    reader.next()
+    _save_items(reader)
 
 
-def save_amazon_data():
-    f = open('report.csv', 'rb')
-    reader = csv.reader(f)
-    for row in reader:
-        row = map(_decode, row)
-        item = Item(
-            item_name=row[0],
-            item_description=row[1],
-            listing_id=row[2],
-            seller_sku=row[3],
-            price=_get_float(row[4], 0.0),
-            quantity=_get_int(row[5]),
-            open_date=row[6],
-            image_url=row[7],
-            item_is_marketplace=row[8],
-            product_id_type=row[9],
-            zshop_shipping_fee=_get_float(row[10]),
-            item_note=row[11],
-            item_condition=row[12],
-            zshop_category1=row[13],
-            zshop_browse_path=row[14],
-            zshop_storefront_feature=row[15],
-            asin1=row[16],
-            asin2=row[17],
-            asin3=row[18],
-            will_ship_internationally=row[19],
-            expedited_shipping=row[20],
-            zshop_boldface=row[21],
-            product_id=row[22],
-            bid_for_featured_placement=row[23],
-            add_delete=row[24],
-            pending_quantity=_get_int(row[25]),
-            fulfillment_channel=row[26],
-            merchant_shipping_group=row[27]
-        )
-        item.save()
+def get_item_new_reviews(item):
+    sleep(5)
+    asin = item.asin1
+    item_reviews = item.review_set.all().order_by('-post_date')
+    if not item_reviews:
+        get_item_all_reviews(item)
+    else:
+        total_pages = _parse_review_data_page(asin)
+        for page_number in range(1, total_pages + 1):
+            amazon_reviews = _parse_review_data(asin, page_number)
+            amazon_reviews_id = [r['id'] for r in amazon_reviews]
+            reviews_id_db = Review.objects.filter(item=item, id__in=amazon_reviews_id)
+            if reviews_id_db.count() == len(amazon_reviews):
+                break
+            for raw in amazon_reviews:
+                _save_item(item, raw)
+
+
+def get_item_all_reviews(item):
+    asin = item.asin1
+    total_pages = _parse_review_data_page(asin)
+    reviews = []
+    for page_number in range(1, total_pages + 1):
+        reviews.extend(_parse_review_data(asin, page_number))
+
+    for raw in reviews:
+        _save_item(item, raw)
+
+    return reviews
