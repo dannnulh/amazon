@@ -10,7 +10,8 @@ Production Configurations
 
 """
 
-from boto.s3.connection import OrdinaryCallingFormat
+from celery.schedules import crontab
+from datetime import timedelta
 
 import logging
 
@@ -216,3 +217,14 @@ ADMIN_URL = env('DJANGO_ADMIN_URL')
 
 # Your production stuff: Below this line define 3rd party library settings
 # ------------------------------------------------------------------------------
+
+CELERYBEAT_SCHEDULE = {
+    'amazon_get_items_task': {
+        'task': 'src.amazon.tasks.amazon_items_task',
+        'schedule': crontab(hour=1, minute=00),
+    },
+    'send_dm_for_waiting_cards_every_day_9am_est': {
+        'task': 'src.amazon.tasks.amazon_item_review_task',
+        'schedule': timedelta(minutes=60)
+    },
+}
