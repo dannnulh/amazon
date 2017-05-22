@@ -10,9 +10,13 @@ def amazon_items_task():
 
 
 @shared_task
-def amazon_item_review_task(item=None):
-    if item:
-        get_item_new_reviews(item)
+def amazon_item_review_task(item_id=None):
+    if item_id:
+        try:
+            item = Item.objects.get(asin1=item_id)
+            get_item_new_reviews(item)
+        except Item.DoesNotExist:
+            pass
     else:
         for item in Item.objects.all():
             get_item_new_reviews(item)

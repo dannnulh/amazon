@@ -20,11 +20,10 @@ def get_items(request):
 def get_reviews(request):
     item_id = request.GET.get('item_id', None)
     try:
-        item = Item.objects.get(asin1=item_id)
         if settings.DEBUG:
-            amazon_item_review_task(item)
+            amazon_item_review_task(item_id)
         else:
-            amazon_item_review_task.delay(item)
+            amazon_item_review_task.delay(item_id)
     except Item.DoesNotExist:
         pass
 
