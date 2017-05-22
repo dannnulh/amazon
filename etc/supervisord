@@ -1,0 +1,78 @@
+#!/bin/sh
+#
+# /etc/rc.d/init.d/supervisord
+#
+# Supervisor is a client/server system that
+# allows its users to monitor and control a
+# number of processes on UNIX-like operating
+# systems.
+#
+# 1. Copy this file to /etc/rc.d/init.d/supervisord
+# sudo cp supervisord /etc/rc.d/init.d/supervisord
+#
+# 2. Make this file executable
+# sudo chmod +x /etc/rc.d/init.d/supervisord
+#
+# 3. Add it to auto start after reboot machine
+# sudo chkconfig supervisord on
+#
+# 4. Start it!
+# sudo service supervisord start
+#
+# chkconfig: - 64 36
+# description: Supervisor Server
+# processname: supervisord
+
+# Source init functions
+. /etc/rc.d/init.d/functions
+
+prog="supervisord"
+
+prefix="/home/ec2-user/.env"
+exec_prefix="${prefix}"
+prog_bin="${exec_prefix}/bin/supervisord"
+
+PIDFILE="/home/ec2-user/$prog.pid"
+
+OPTIONS="-c /home/ec2-user/amazon/etc/supervisord.conf"
+
+start() {
+        echo -n $"Starting $prog: "
+        source /home/ec2-user/.bashrc
+        daemon --user=ec2-user $prog_bin --pidfile $PIDFILE $OPTIONS
+        RETVAL=$?
+        echo
+        return $RETVAL
+}
+
+stop()
+{
+        echo -n $"Shutting down $prog: "
+        [ -f $PIDFILE ] && runuser -l ec2-user -c "kill `cat /home/ec2-user/supervisord.pid`" || success $"$prog shutdown"
+        echo
+}
+
+case "$1" in
+
+  start)
+    start
+  ;;
+
+  stop)
+    stop
+  ;;
+
+  status)
+        status $prog
+  ;;
+
+  restart)
+    stop
+    start
+  ;;
+
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+  ;;
+
+esac
