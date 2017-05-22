@@ -20,4 +20,3 @@ def amazon_item_review_task(item_id=None):
     else:
         for item in Item.objects.all():
             get_item_new_reviews(item)
-    send_slack_notification()

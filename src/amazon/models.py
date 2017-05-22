@@ -34,6 +34,7 @@ class Item(TimeStampedModel):
     pending_quantity = models.IntegerField(null=True, blank=True)
     fulfillment_channel = models.CharField(max_length=255)
     merchant_shipping_group = models.CharField(max_length=255)
+    top_critical_review_id = models.CharField(max_length=255, null=True, blank=True)
 
     def __unicode__(self):
         return self.asin1
