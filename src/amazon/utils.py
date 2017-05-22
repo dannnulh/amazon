@@ -267,7 +267,7 @@ def get_items():
 
     resp = x.request_report(report_type='_GET_MERCHANT_LISTINGS_ALL_DATA_')
     request_id = resp.parsed.ReportRequestInfo.ReportRequestId
-    sleep(30)
+    sleep(50)
 
     resp = x.get_report_request_list(requestids=(request_id,))
     report_id = resp.parsed.ReportRequestInfo.GeneratedReportId
@@ -302,6 +302,7 @@ def get_item_new_reviews(item):
 
     # check if the item top critical review has been changed
     # if changed and the reivew didn't send before then send slack notification
+    sleep(5)
     critical_review_raw = parse_top_critical_review(item.asin1)
     print item, critical_review_raw
     if critical_review_raw:
