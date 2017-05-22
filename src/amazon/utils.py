@@ -100,7 +100,7 @@ def _save_items(reader):
                 merchant_shipping_group=row[27]
             )
         item.save()
-    Item.objects.extend(asin1__in=asin_list).delete()
+    Item.objects.exclude(asin1__in=asin_list).delete()
 
 
 def _save_review(item, raw):
