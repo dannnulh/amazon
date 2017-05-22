@@ -33,9 +33,11 @@ def _decode(value):
 
 
 def _save_items(reader):
+    asin_list = []
     for row in reader:
         row = map(_decode, row)
         asin1 = row[16]
+        asin_list.append(asin1)
         try:
             item = Item.objects.get(asin1=asin1)
             item.item_name = row[0]
@@ -98,6 +100,7 @@ def _save_items(reader):
                 merchant_shipping_group=row[27]
             )
         item.save()
+    Item.objects.extend(asin1__in=asin_list).delete()
 
 
 def _save_review(item, raw):
