@@ -1,6 +1,7 @@
 import StringIO
 import csv
 import requests
+from django.conf import settings
 from lxml import html
 from time import sleep
 from mws import mws
@@ -207,8 +208,8 @@ def _parse_review_data(asin, page_number=1):
 
 
 def get_items():
-    x = mws.Reports(access_key='AKIAIJBJ3KDB22JYZTHA', secret_key='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',
-                    account_id='A1B4GJWW9XJ35M', region='UK')
+    x = mws.Reports(access_key=settings.MWS_ACCESS_KEY, secret_key=settings.MWS_SECRET_KEY,
+                    account_id=settings.MWS_ACCOUNT_ID, region='UK')
 
     resp = x.request_report(report_type='_GET_MERCHANT_LISTINGS_ALL_DATA_')
     request_id = resp.parsed.ReportRequestInfo.ReportRequestId
@@ -272,7 +273,7 @@ def send_slack_notification():
 def send_slack_dm(slack_user_id, text):
     url = 'https://slack.com/api/chat.postMessage'
     params = {
-        'token': 'xoxp-10174825767-15913840452-75138061303-aceae2a1df',
+        'token': settings.SLACK_TOKEN,
         'channel': slack_user_id,
         'text': text
     }
