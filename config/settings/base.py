@@ -269,6 +269,7 @@ AUTOSLUG_SLUGIFY_FUNCTION = 'slugify.slugify'
 
 ########## CELERY
 INSTALLED_APPS += ['src.taskapp.celery.CeleryConfig']
+INSTALLED_APPS += ('kombu.transport.django',)
 CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='django://')
 BROKER_URL = env('CELERY_BROKER_URL', default='django://')
 ########## END CELERY
