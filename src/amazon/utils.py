@@ -313,7 +313,7 @@ def get_item_new_reviews(item):
 
             if critical_review.send_notification == False:
                 text = generate_slack_text(critical_review)
-                send_slack_dm('dev-dan', text)
+                send_slack_dm('dev-dan-alerts', text)
                 critical_review.send_notification = True
                 critical_review.save()
 
