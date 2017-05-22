@@ -208,7 +208,7 @@ def _parse_review_data(asin, page_number=1):
     return reviews_list
 
 
-def _parse_top_critical_review(asin):
+def parse_top_critical_review(asin):
     amazon_url = 'https://www.amazon.co.uk/product-reviews/%s/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&reviewerType=all_reviews&showViewpoints=1&sortBy=helpful&pageNumber=1&filterByStar=critical' % asin
     headers = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'}
@@ -299,7 +299,8 @@ def get_item_new_reviews(item):
 
     # check if the item top critical review has been changed
     # if changed and the reivew didn't send before then send slack notification
-    critical_review_raw = _parse_top_critical_review(item.asin1)
+    critical_review_raw = parse_top_critical_review(item.asin1)
+    print item, critical_review_raw
     if critical_review_raw:
         critical_review = _save_review(item, critical_review_raw)
         if item.top_critical_review_id == None or item.top_critical_review_id != critical_review.id:
