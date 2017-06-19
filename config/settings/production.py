@@ -227,4 +227,8 @@ CELERYBEAT_SCHEDULE = {
         'task': 'src.amazon.tasks.amazon_item_review_task',
         'schedule': timedelta(minutes=60)
     },
+    'download_business_report_task': {
+        'task': 'src.amazon.tasks.download_business_report_task',
+        'schedule': crontab(hour=23, minute=30),
+    },
 }

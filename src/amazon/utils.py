@@ -397,8 +397,9 @@ def download_business_report(dt):
     :param dt: The date, need to transfer to the string, the format is 'dd/mm/yyyy'
     :return:
     '''
-    dt_string = dt.strftime('%d/%m/%y')
-    url = 'https://sellercentral.amazon.co.uk/gp/site-metrics/load/csv/BusinessReport-19-06-2017.csv'
+    dt_string = dt.strftime('%d/%m/%Y')
+    ds = datetime.date.today().strftime('%d-%m-%Y')
+    url = 'https://sellercentral.amazon.co.uk/gp/site-metrics/load/csv/BusinessReport-%s.csv' % ds
     headers = {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Encoding': 'gzip, deflate, br',
@@ -434,3 +435,5 @@ def download_business_report(dt):
         reader = csv.reader(f)
         reader.next()
         _save_sales_traffic_data(dt, reader)
+    else:
+        raise Exception(resp.content)
