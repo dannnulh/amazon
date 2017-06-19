@@ -81,4 +81,4 @@ class DetailPageSalesTraffic(TimeStampedModel):
     total_order_items = models.PositiveIntegerField()
 
     def __unicode__(self):
-        return u'[%s]%s: %s' % (self.date, self.child_asin, self.total_order_items)
+        return u'[%s]%s: %s' % (self.dt, self.child_asin, self.total_order_items)
