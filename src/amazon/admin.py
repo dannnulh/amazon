@@ -18,6 +18,6 @@ class ReviewAdmin(admin.ModelAdmin):
 @admin.register(DetailPageSalesTraffic)
 class DetailPageSalesTrafficAdmin(admin.ModelAdmin):
     search_fields = ('child_asin', 'title', 'sku')
-    list_display = ('dt', 'parent_asin', 'child_asin', 'title', 'sku', 'sessions', 'session_percentage', 'page_views',
+    list_display = ('dt', 'parent_asin', 'child_asin', 'sku', 'sessions', 'session_percentage', 'page_views',
                     'page_views_percentage', 'buy_box_percentage', 'units_ordered', 'unit_session_percentage',
                     'ordered_product_sales', 'currency', 'total_order_items', 'created', 'modified')
