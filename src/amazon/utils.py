@@ -1,5 +1,6 @@
 import StringIO
 import csv
+import datetime
 import requests
 from django.conf import settings
 from lxml import html
@@ -7,10 +8,11 @@ from time import sleep
 from mws import mws
 from dateutil import parser as dateparser
 
-from .models import Item, Review
+from .models import Item, Review, DetailPageSalesTraffic
 
 
 def _get_float(value, default=None):
+    value = value.replace(',', '')
     result = default
     try:
         result = float(value)
@@ -20,12 +22,18 @@ def _get_float(value, default=None):
 
 
 def _get_int(value, default=None):
+    value = value.replace(',', '')
     result = default
     try:
         result = int(value)
     except:
         pass
     return result
+
+
+def _get_percent(value, default=None):
+    value = value.replace('%', '')
+    return _get_float(value, default)
 
 
 def _decode(value):
@@ -356,3 +364,73 @@ def send_slack_dm(slack_user_id, text):
     }
     resp = requests.post(url, params)
     return resp
+
+
+def _save_sales_traffic_data(dt, reader):
+    DetailPageSalesTraffic.objects.filter(dt=dt).delete()
+    for row in reader:
+        print row
+        sales = row[11].replace('\xc2\xa3', '')
+        dpst = DetailPageSalesTraffic(
+            dt=dt,
+            parent_asin=row[0],
+            child_asin=row[1],
+            title=row[2],
+            sku=row[3],
+            sessions=_get_int(row[4]),
+            session_percentage=_get_percent(row[5]),
+            page_views=_get_int(row[6]),
+            page_views_percentage=_get_percent(row[7]),
+            buy_box_percentage=_get_percent(row[8]),
+            units_ordered=_get_int(row[9]),
+            unit_session_percentage=_get_percent(row[10]),
+            ordered_product_sales=_get_float(sales),
+            currency='\xc2\xa3',
+            total_order_items=_get_int(row[12])
+        )
+        dpst.save()
+
+
+def download_business_report(dt):
+    '''
+    Download the busincess report
+    :param dt: The date, need to transfer to the string, the format is 'dd/mm/yyyy'
+    :return:
+    '''
+    dt_string = dt.strftime('%d/%m/%y')
+    url = 'https://sellercentral.amazon.co.uk/gp/site-metrics/load/csv/BusinessReport-19-06-2017.csv'
+    headers = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'en,zh-CN;q=0.8,zh;q=0.6,ar;q=0.4',
+        'Cache-Control': 'max-age=0',
+        'Connection': 'keep-alive',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Cookie': 'x-wl-uid=1xKY7uFXjCAdnxWZZKg/nycK9lNUoQg2JAUCbNTSddg9PwNg6VFf/dYif4OcbTugJ+jwcxy0mnk7gcHFzq5QMf1+Okq84XWCgzhirT3p0J8Yjh6Xu1+gU/S9rByblunooZ7mQIxxAVtE=; ubid-main=262-8389427-1250409; lc-acbuk=en_GB; forum-ru="https://sellercentral.amazon.co.uk/forums/thread.jspa?threadID=111303"; at-acbuk=Atza|IwEBINbEvmabdtacTmjH-c-la71V5TgcUKq9TF5AIe31CIm8LTErA1onZYvYicccGiByuOAcR1tQ7s4upeaWXzarQCvMWszSAHxN_9ZKnapQ24Ph5vixmtVvfVT8cUcEK8Blxxt2LA-amfAnc4vZ5dChRtdZNm7Z0nhuX1z7nmszsWt5qq6gfPxJFxhrD_a1umCbqY3I9MFvprsUHir3xVPnxY57OrY6aZJr7rGiI-l_ovXZvmmbljLRTRVWAR947drFZGIXZNi9MK5Kl1S2zrLxtH2XKdc4V1N9uOec1rmk5sGgj32zO9KNUSV_uygzET4CUSYQqpZNIfljbKLePZD58EJRkDTMtyPCcxd0Ykv_ohJE1EnllIPfhhWYBRSHndMV2-9PWBNKwlplORl4udIDhnXh; sess-at-acbuk="rTKf2sKDO4XAl3Yfamat9kEQs90mL8H/J6bE7MTf9bI="; session-id-time=1498460400l; csm-hit=425.50|1497862874605; session-id=262-6492154-8043924; session-token="vjGn3icyWi4vLs+W45sin2e3FgYq3fadfeFwS+NxJqvHQRfN12o6VfWMAmCGUNLWvdRdIY3Y3VPD8ueIytSUYVY214oJCsWcZ9+JsG6P5hWkOkQO5UGoO5jrtLuqJxmgKckd7WAtVAtPawjES1nT+EW8DymINtsWV1ye/+ZN6QqUD90tJ/JifsV8goO7d4gXovBHHdv6FtMBGi7dyT+zuOHXh8TlkFTrcS/UO8aiUCv71MTrCjR2mmu68iPCc0aVe0V7eRoxgbU="; x-acbuk=PZflALNiFvci5xbNprqHllaI6ZUJoRuk; ubid-acbuk=258-4084861-1778829',
+        'Host': 'sellercentral.amazon.co.uk',
+        'Origin': 'https://sellercentral.amazon.co.uk',
+        'Referer': 'https://sellercentral.amazon.co.uk/gp/site-metrics/report.html',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+    }
+
+    data = {
+        'reportID': '102:DetailSalesTrafficBySKU',
+        'sortIsAscending': '0',
+        'sortColumn': '13',
+        'fromDate': dt_string,
+        'toDate': dt_string,
+        'cols': '/c0/c1/c2/c3/c4/c5/c6/c7/c8/c9/c10/c11/c12',
+        'rows': '',
+        'dateUnit': '1',
+        'currentPage': '0',
+        'runDate': ''
+    }
+
+    resp = requests.post(url=url, data=data, headers=headers)
+
+    if resp.status_code == 200:
+        f = StringIO.StringIO(resp.content)
+        reader = csv.reader(f)
+        reader.next()
+        _save_sales_traffic_data(dt, reader)

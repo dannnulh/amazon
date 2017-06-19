@@ -61,3 +61,24 @@ class Review(TimeStampedModel):
     @property
     def link(self):
         return u'https://www.amazon.co.uk/gp/customer-reviews/%s/' % self.id
+
+
+class DetailPageSalesTraffic(TimeStampedModel):
+    dt = models.DateField(db_index=True)
+    parent_asin = models.CharField(max_length=255)
+    child_asin = models.CharField(max_length=255, db_index=True)
+    title = models.TextField()
+    sku=models.CharField(max_length=255)
+    sessions=models.PositiveIntegerField()
+    session_percentage = models.FloatField()
+    page_views = models.PositiveIntegerField()
+    page_views_percentage = models.FloatField()
+    buy_box_percentage = models.FloatField()
+    units_ordered = models.PositiveIntegerField()
+    unit_session_percentage = models.FloatField()
+    ordered_product_sales = models.FloatField()
+    currency = models.CharField(max_length=10)
+    total_order_items = models.PositiveIntegerField()
+
+    def __unicode__(self):
+        return u'[%s]%s: %s' % (self.date, self.child_asin, self.total_order_items)
