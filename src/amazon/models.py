@@ -35,6 +35,7 @@ class Item(TimeStampedModel):
     fulfillment_channel = models.CharField(max_length=255)
     merchant_shipping_group = models.CharField(max_length=255)
     top_critical_review_id = models.CharField(max_length=255, null=True, blank=True)
+    avg_unit_session_percentage = models.FloatField(null=True, blank=True)
 
     def __unicode__(self):
         return self.asin1

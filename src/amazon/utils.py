@@ -3,6 +3,7 @@ import csv
 import datetime
 import requests
 from django.conf import settings
+from django.db.models import Avg
 from lxml import html
 from time import sleep
 from mws import mws
@@ -320,8 +321,8 @@ def get_item_new_reviews(item):
             item.save()
 
             if critical_review.send_notification == False:
-                text = generate_slack_text(critical_review)
-                send_slack_dm('dev-dan-alerts', text)
+                text = _generate_slack_text(critical_review)
+                _send_slack_dm('dev-dan-alerts', text)
                 critical_review.send_notification = True
                 critical_review.save()
 
@@ -341,13 +342,13 @@ def get_item_all_reviews(item):
 
 def send_slack_notification():
     for review in Review.objects.filter(rating__lt=4.0, send_notification=False):
-        text = generate_slack_text(review)
-        send_slack_dm('dev-dan', text)
+        text = _generate_slack_text(review)
+        _send_slack_dm('dev-dan', text)
         review.send_notification = True
         review.save()
 
 
-def generate_slack_text(review):
+def _generate_slack_text(review):
     text = 'The item top critical review changed\n```Item:%s\nItem Link:%s\nAuthor:%s\nTitle:%s\nPosted Date:%s\nRating:%s\nLink:%s```' % (
         review.item.item_name, review.item.link, review.author, review.title, review.post_date, review.rating,
         review.link
@@ -355,7 +356,7 @@ def generate_slack_text(review):
     return text
 
 
-def send_slack_dm(slack_user_id, text):
+def _send_slack_dm(slack_user_id, text):
     url = 'https://slack.com/api/chat.postMessage'
     params = {
         'token': settings.SLACK_TOKEN,
@@ -393,7 +394,7 @@ def _save_sales_traffic_data(dt, reader):
         dpst.save()
 
 
-def get_cookie():
+def _get_cookie():
     cookie = Cookie.objects.all()[0]
     return cookie.content
 
@@ -414,7 +415,7 @@ def download_business_report(dt):
         'Cache-Control': 'max-age=0',
         'Connection': 'keep-alive',
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': get_cookie(),
+        'Cookie': _get_cookie(),
         'Host': 'sellercentral.amazon.co.uk',
         'Origin': 'https://sellercentral.amazon.co.uk',
         'Referer': 'https://sellercentral.amazon.co.uk/gp/site-metrics/report.html',
@@ -446,3 +447,16 @@ def download_business_report(dt):
         _save_sales_traffic_data(dt, reader)
     else:
         raise Exception(resp.content)
+
+
+def calculate_average_usp():
+    avgs = DetailPageSalesTraffic.objects.values('child_asin').annotate(avg = Avg('unit_session_percentage'))
+    for i in avgs:
+        asin = i['child_asin']
+        avg = i['avg']
+        try:
+            item = Item.objects.get(asin1=asin)
+            item.avg_unit_session_percentage = avg
+            item.save()
+        except Item.DoesNotExist:
+            pass
