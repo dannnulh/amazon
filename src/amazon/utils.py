@@ -370,25 +370,24 @@ def _send_slack_dm(slack_user_id, text):
 def _save_sales_traffic_data(dt, reader):
     DetailPageSalesTraffic.objects.filter(dt=dt).delete()
     for row in reader:
-        if len(row) < 13:
+        if len(row) < 12:
             continue
-        sales = row[11].replace('\xc2\xa3', '')
+        sales = row[10].replace('\xc2\xa3', '')
         dpst = DetailPageSalesTraffic(
             dt=dt,
             parent_asin=row[0],
             child_asin=row[1],
             title=row[2],
-            sku=row[3],
-            sessions=_get_int(row[4]),
-            session_percentage=_get_percent(row[5]),
-            page_views=_get_int(row[6]),
-            page_views_percentage=_get_percent(row[7]),
-            buy_box_percentage=_get_percent(row[8]),
-            units_ordered=_get_int(row[9]),
-            unit_session_percentage=_get_percent(row[10]),
+            sessions=_get_int(row[3]),
+            session_percentage=_get_percent(row[4]),
+            page_views=_get_int(row[5]),
+            page_views_percentage=_get_percent(row[6]),
+            buy_box_percentage=_get_percent(row[7]),
+            units_ordered=_get_int(row[8]),
+            unit_session_percentage=_get_percent(row[9]),
             ordered_product_sales=_get_float(sales),
             currency='\xc2\xa3',
-            total_order_items=_get_int(row[12])
+            total_order_items=_get_int(row[11])
         )
         dpst.save()
 
@@ -425,10 +424,10 @@ def download_business_report(dt):
     data = {
         'reportID': '102:DetailSalesTrafficByChildItem',
         'sortIsAscending': '0',
-        'sortColumn': '13',
+        'sortColumn': '12',
         'fromDate': dt_string,
         'toDate': dt_string,
-        'cols': '/c0/c1/c2/c3/c4/c5/c6/c7/c8/c9/c10/c11/c12',
+        'cols': '/c0/c1/c2/c3/c4/c5/c6/c7/c8/c9/c10/c11',
         'rows': '',
         'dateUnit': '1',
         'currentPage': '0',

@@ -69,7 +69,6 @@ class DetailPageSalesTraffic(TimeStampedModel):
     parent_asin = models.CharField(max_length=255)
     child_asin = models.CharField(max_length=255, db_index=True)
     title = models.TextField()
-    sku=models.CharField(max_length=255)
     sessions=models.PositiveIntegerField()
     session_percentage = models.FloatField()
     page_views = models.PositiveIntegerField()
