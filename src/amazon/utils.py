@@ -469,7 +469,7 @@ def check_avg_usp(dt):
     for i in dpst:
         warning = []
         if i.unit_session_percentage < 10.0:
-            warning.append('unit session percentage < 10.0%')
+            warning.append('unit session percentage (%.2f%s) less than 10.0%s' % (i.unit_session_percentage, '%', '%'))
         try:
             item = Item.objects.get(asin1=i.child_asin)
             if i.unit_session_percentage < item.avg_unit_session_percentage:
