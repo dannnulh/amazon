@@ -476,7 +476,7 @@ def check_avg_usp(dt):
                 diff = item.avg_unit_session_percentage - i.unit_session_percentage
                 diff_percent = diff / item.avg_unit_session_percentage * 100.0
                 if diff_percent < 10.0:
-                    warning.append('unit session percentage drops %.2f%s' % (diff_percent, '%'))
+                    warning.append('unit session percentage drops %.2f%s (the avg is %.2f%s)' % (diff_percent, '%', item.avg_unit_session_percentage, '%'))
         except Item.DoesNotExist:
             pass
         if warning:
