@@ -5,7 +5,7 @@ from .models import Item, Review, DetailPageSalesTraffic, Cookie
 
 @admin.register(Item)
 class ItemAdmin(admin.ModelAdmin):
-    list_display = ('id', 'asin1', 'item_name', 'top_critical_review_id', 'created', 'modified')
+    list_display = ('id', 'asin1', 'item_name', 'top_critical_review_id', 'avg_unit_session_percentage', 'created', 'modified')
     search_fields = ['item_name', 'asin1']
 
 
