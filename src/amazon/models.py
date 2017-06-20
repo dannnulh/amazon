@@ -82,3 +82,7 @@ class DetailPageSalesTraffic(TimeStampedModel):
 
     def __unicode__(self):
         return u'[%s]%s: %s' % (self.dt, self.child_asin, self.total_order_items)
+
+
+class Cookie(TimeStampedModel):
+    content = models.TextField()

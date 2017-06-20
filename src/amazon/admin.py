@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Item, Review, DetailPageSalesTraffic
+from .models import Item, Review, DetailPageSalesTraffic, Cookie
 
 
 @admin.register(Item)
@@ -21,3 +21,8 @@ class DetailPageSalesTrafficAdmin(admin.ModelAdmin):
     list_display = ('dt', 'child_asin', 'title', 'sku', 'sessions', 'session_percentage', 'page_views',
                     'page_views_percentage', 'buy_box_percentage', 'units_ordered', 'unit_session_percentage',
                     'ordered_product_sales', 'currency', 'total_order_items', 'created', 'modified')
+
+
+@admin.register(Cookie)
+class CookieAdmin(admin.ModelAdmin):
+    list_display = ('id', 'content', 'created', 'modified')

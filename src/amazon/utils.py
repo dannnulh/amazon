@@ -8,7 +8,7 @@ from time import sleep
 from mws import mws
 from dateutil import parser as dateparser
 
-from .models import Item, Review, DetailPageSalesTraffic
+from .models import Item, Review, DetailPageSalesTraffic, Cookie
 
 
 def _get_float(value, default=None):
@@ -393,6 +393,11 @@ def _save_sales_traffic_data(dt, reader):
         dpst.save()
 
 
+def get_cookie():
+    cookie = Cookie.objects.all()[0]
+    return cookie.content
+
+
 def download_business_report(dt):
     '''
     Download the busincess report
@@ -409,7 +414,7 @@ def download_business_report(dt):
         'Cache-Control': 'max-age=0',
         'Connection': 'keep-alive',
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': 'x-wl-uid=1xKY7uFXjCAdnxWZZKg/nycK9lNUoQg2JAUCbNTSddg9PwNg6VFf/dYif4OcbTugJ+jwcxy0mnk7gcHFzq5QMf1+Okq84XWCgzhirT3p0J8Yjh6Xu1+gU/S9rByblunooZ7mQIxxAVtE=; ubid-main=262-8389427-1250409; lc-acbuk=en_GB; forum-ru="https://sellercentral.amazon.co.uk/forums/thread.jspa?threadID=111303"; at-acbuk=Atza|IwEBINbEvmabdtacTmjH-c-la71V5TgcUKq9TF5AIe31CIm8LTErA1onZYvYicccGiByuOAcR1tQ7s4upeaWXzarQCvMWszSAHxN_9ZKnapQ24Ph5vixmtVvfVT8cUcEK8Blxxt2LA-amfAnc4vZ5dChRtdZNm7Z0nhuX1z7nmszsWt5qq6gfPxJFxhrD_a1umCbqY3I9MFvprsUHir3xVPnxY57OrY6aZJr7rGiI-l_ovXZvmmbljLRTRVWAR947drFZGIXZNi9MK5Kl1S2zrLxtH2XKdc4V1N9uOec1rmk5sGgj32zO9KNUSV_uygzET4CUSYQqpZNIfljbKLePZD58EJRkDTMtyPCcxd0Ykv_ohJE1EnllIPfhhWYBRSHndMV2-9PWBNKwlplORl4udIDhnXh; sess-at-acbuk="rTKf2sKDO4XAl3Yfamat9kEQs90mL8H/J6bE7MTf9bI="; session-id-time=1498460400l; csm-hit=425.50|1497862874605; session-id=262-6492154-8043924; session-token="vjGn3icyWi4vLs+W45sin2e3FgYq3fadfeFwS+NxJqvHQRfN12o6VfWMAmCGUNLWvdRdIY3Y3VPD8ueIytSUYVY214oJCsWcZ9+JsG6P5hWkOkQO5UGoO5jrtLuqJxmgKckd7WAtVAtPawjES1nT+EW8DymINtsWV1ye/+ZN6QqUD90tJ/JifsV8goO7d4gXovBHHdv6FtMBGi7dyT+zuOHXh8TlkFTrcS/UO8aiUCv71MTrCjR2mmu68iPCc0aVe0V7eRoxgbU="; x-acbuk=PZflALNiFvci5xbNprqHllaI6ZUJoRuk; ubid-acbuk=258-4084861-1778829',
+        'Cookie': get_cookie(),
         'Host': 'sellercentral.amazon.co.uk',
         'Origin': 'https://sellercentral.amazon.co.uk',
         'Referer': 'https://sellercentral.amazon.co.uk/gp/site-metrics/report.html',
@@ -435,7 +440,9 @@ def download_business_report(dt):
     if resp.status_code == 200:
         f = StringIO.StringIO(resp.content)
         reader = csv.reader(f)
-        reader.next()
+        header = reader.next()
+        if header[1] != '(Child) ASIN':
+            raise Exception('Session timeout')
         _save_sales_traffic_data(dt, reader)
     else:
         raise Exception(resp.content)
