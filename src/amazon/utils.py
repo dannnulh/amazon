@@ -4,6 +4,7 @@ import datetime
 import requests
 from django.conf import settings
 from django.db.models import Avg
+from django.db.models import Sum
 from lxml import html
 from time import sleep
 from mws import mws
@@ -450,10 +451,12 @@ def download_business_report(dt):
 
 
 def calculate_average_usp():
-    avgs = DetailPageSalesTraffic.objects.values('child_asin').annotate(avg = Avg('unit_session_percentage'))
+    avgs = DetailPageSalesTraffic.objects.values('child_asin').annotate(sum_session = Sum('sessions'), sum_units_ordered=Sum('units_ordered'))
     for i in avgs:
         asin = i['child_asin']
-        avg = i['avg']
+        sum_session = float(i['sum_session'])
+        sum_units_ordered = float(i['sum_units_ordered'])
+        avg = sum_units_ordered / sum_session * 100.0
         try:
             item = Item.objects.get(asin1=asin)
             item.avg_unit_session_percentage = avg
