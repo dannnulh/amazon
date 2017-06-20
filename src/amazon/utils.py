@@ -343,7 +343,7 @@ def get_item_all_reviews(item):
 def send_slack_notification():
     for review in Review.objects.filter(rating__lt=4.0, send_notification=False):
         text = _generate_slack_text(review)
-        _send_slack_dm('dev-dan', text)
+        _send_slack_dm('dev-dan-alerts', text)
         review.send_notification = True
         review.save()
 
@@ -448,7 +448,9 @@ def download_business_report(dt):
 
 
 def calculate_average_usp():
-    avgs = DetailPageSalesTraffic.objects.values('child_asin').annotate(sum_session = Sum('sessions'), sum_units_ordered=Sum('units_ordered'))
+    ninetydays = datetime.date.today() - datetime.timedelta(days=90)
+    avgs = DetailPageSalesTraffic.objects.filter(dt__gte=ninetydays).values('child_asin').annotate(
+        sum_session=Sum('sessions'), sum_units_ordered=Sum('units_ordered'))
     for i in avgs:
         asin = i['child_asin']
         sum_session = float(i['sum_session'])
@@ -460,3 +462,26 @@ def calculate_average_usp():
             item.save()
         except Item.DoesNotExist:
             pass
+
+
+def check_avg_usp(dt):
+    dpst = DetailPageSalesTraffic.objects.filter(dt=dt)
+    for i in dpst:
+        warning = []
+        if i.unit_session_percentage < 10.0:
+            warning.append('unit session percentage < 10.0%')
+        try:
+            item = Item.objects.get(asin1=i.child_asin)
+            if i.unit_session_percentage < item.avg_unit_session_percentage:
+                diff = item.avg_unit_session_percentage - i.unit_session_percentage
+                diff_percent = diff / item.avg_unit_session_percentage * 100.0
+                if diff_percent < 10.0:
+                    warning.append('unit session percentage drops %.2f%s' % (diff_percent, '%'))
+        except Item.DoesNotExist:
+            pass
+        if warning:
+            warning_string = ','.join(warning)
+            text = 'Unit Session Percentage Alert\n```Date:%s\nItem:%s\nItem Link:%s\nReason:%s```' % (
+                dt, i.title, i.link, warning_string
+            )
+            _send_slack_dm('dev-dan-alerts', text)

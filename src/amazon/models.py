@@ -83,6 +83,10 @@ class DetailPageSalesTraffic(TimeStampedModel):
     def __unicode__(self):
         return u'[%s]%s: %s' % (self.dt, self.child_asin, self.total_order_items)
 
+    @property
+    def link(self):
+        return u'https://www.amazon.co.uk/dp/%s' % self.child_asin
+
 
 class Cookie(TimeStampedModel):
     content = models.TextField()
