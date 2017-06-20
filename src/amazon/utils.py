@@ -370,6 +370,8 @@ def _save_sales_traffic_data(dt, reader):
     DetailPageSalesTraffic.objects.filter(dt=dt).delete()
     for row in reader:
         print row
+        if len(row) < 13:
+            continue
         sales = row[11].replace('\xc2\xa3', '')
         dpst = DetailPageSalesTraffic(
             dt=dt,

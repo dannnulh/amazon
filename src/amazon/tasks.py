@@ -25,5 +25,5 @@ def amazon_item_review_task(item_id=None):
 
 @shared_task
 def download_business_report_task():
-    dt = datetime.date.today()
+    dt = datetime.date.today() - datetime.timedelta(days=1)
     download_business_report(dt)
