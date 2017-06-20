@@ -3,7 +3,6 @@ import csv
 import datetime
 import requests
 from django.conf import settings
-from django.db.models import Avg
 from django.db.models import Sum
 from lxml import html
 from time import sleep
@@ -371,7 +370,6 @@ def _send_slack_dm(slack_user_id, text):
 def _save_sales_traffic_data(dt, reader):
     DetailPageSalesTraffic.objects.filter(dt=dt).delete()
     for row in reader:
-        print row
         if len(row) < 13:
             continue
         sales = row[11].replace('\xc2\xa3', '')
@@ -425,7 +423,7 @@ def download_business_report(dt):
     }
 
     data = {
-        'reportID': '102:DetailSalesTrafficBySKU',
+        'reportID': '102:DetailSalesTrafficByChildItem',
         'sortIsAscending': '0',
         'sortColumn': '13',
         'fromDate': dt_string,
