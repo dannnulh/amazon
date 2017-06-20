@@ -2,7 +2,7 @@ import datetime
 from celery import shared_task
 
 from .models import Item
-from .utils import get_items, get_item_new_reviews, download_business_report
+from .utils import get_items, get_item_new_reviews, download_business_report, check_avg_usp
 
 
 @shared_task
@@ -27,3 +27,4 @@ def amazon_item_review_task(item_id=None):
 def download_business_report_task():
     dt = datetime.date.today() - datetime.timedelta(days=1)
     download_business_report(dt)
+    check_avg_usp(dt)
