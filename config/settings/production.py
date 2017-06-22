@@ -229,6 +229,6 @@ CELERYBEAT_SCHEDULE = {
     },
     'download_business_report_task': {
         'task': 'src.amazon.tasks.download_business_report_task',
-        'schedule': crontab(hour=1, minute=30),
+        'schedule': crontab(hour=9, minute=30),
     },
 }
