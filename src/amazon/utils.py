@@ -2,6 +2,8 @@ import StringIO
 import csv
 import datetime
 import requests
+from requests import session
+from bs4 import BeautifulSoup
 from django.conf import settings
 from django.db.models import Sum
 from lxml import html
@@ -405,46 +407,71 @@ def download_business_report(dt):
     '''
     dt_string = dt.strftime('%d/%m/%Y')
     ds = datetime.date.today().strftime('%d-%m-%Y')
-    url = 'https://sellercentral.amazon.co.uk/gp/site-metrics/load/csv/BusinessReport-%s.csv' % ds
+
+    amazon_seller_central_home_url = 'https://sellercentral.amazon.co.uk/'
+
     headers = {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Encoding': 'gzip, deflate, br',
         'Accept-Language': 'en,zh-CN;q=0.8,zh;q=0.6,ar;q=0.4',
-        'Cache-Control': 'max-age=0',
         'Connection': 'keep-alive',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': _get_cookie(),
         'Host': 'sellercentral.amazon.co.uk',
-        'Origin': 'https://sellercentral.amazon.co.uk',
         'Referer': 'https://sellercentral.amazon.co.uk/gp/site-metrics/report.html',
         'Upgrade-Insecure-Requests': '1',
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
     }
 
-    data = {
-        'reportID': '102:DetailSalesTrafficByChildItem',
-        'sortIsAscending': '0',
-        'sortColumn': '12',
-        'fromDate': dt_string,
-        'toDate': dt_string,
-        'cols': '/c0/c1/c2/c3/c4/c5/c6/c7/c8/c9/c10/c11',
-        'rows': '',
-        'dateUnit': '1',
-        'currentPage': '0',
-        'runDate': ''
+    login_data = {
+        'email': settings.AMAZON_LOGIN_EMAIL,
+        'password': settings.AMAZON_LOGIN_PASSWORD
     }
 
-    resp = requests.post(url=url, data=data, headers=headers)
+    with session() as s:
+        # request the amazon seller central home page at first
+        resp = s.get(amazon_seller_central_home_url, headers=headers)
 
-    if resp.status_code == 200:
-        f = StringIO.StringIO(resp.content)
-        reader = csv.reader(f)
-        header = reader.next()
-        if header[1] != '(Child) ASIN':
-            raise Exception('Session timeout')
-        _save_sales_traffic_data(dt, reader)
-    else:
-        raise Exception(resp.content)
+        # use BeautifulSoup to analysis the html and prepare the form data
+        soup = BeautifulSoup(resp.content, 'html.parser')
+        action = soup.select('form[name=signIn]')[0].get('action')
+        form_data = soup.select('form[name=signIn] input')
+        for input in form_data:
+            if input.attrs.get('name', None) and input.attrs.get('name', None) not in login_data:
+                login_data.update({input.attrs['name']: input.attrs['value']})
+
+        # login
+        s.post(action, data=login_data, headers=headers)
+
+        report_url = 'https://sellercentral.amazon.co.uk/gp/site-metrics/load/csv/BusinessReport-%s.csv' % ds
+        headers.update({
+            'Cache-Control': 'max-age=0',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Origin': 'https://sellercentral.amazon.co.uk'
+        })
+
+        data = {
+            'reportID': '102:DetailSalesTrafficByChildItem',
+            'sortIsAscending': '0',
+            'sortColumn': '12',
+            'fromDate': dt_string,
+            'toDate': dt_string,
+            'cols': '/c0/c1/c2/c3/c4/c5/c6/c7/c8/c9/c10/c11',
+            'rows': '',
+            'dateUnit': '1',
+            'currentPage': '0',
+            'runDate': ''
+        }
+
+        resp = s.post(url=report_url, data=data, headers=headers)
+
+        if resp.status_code == 200:
+            f = StringIO.StringIO(resp.content)
+            reader = csv.reader(f)
+            header = reader.next()
+            if header[1] != '(Child) ASIN':
+                raise Exception('Session timeout')
+            _save_sales_traffic_data(dt, reader)
+        else:
+            raise Exception(resp.content)
 
 
 def calculate_average_usp():

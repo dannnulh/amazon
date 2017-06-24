@@ -232,3 +232,6 @@ CELERYBEAT_SCHEDULE = {
         'schedule': crontab(hour=9, minute=30),
     },
 }
+
+AMAZON_LOGIN_EMAIL = env('AMAZON_LOGIN_EMAIL')
+AMAZON_LOGIN_PASSWORD = env('AMAZON_LOGIN_PASSWORD')
