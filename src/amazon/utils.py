@@ -439,7 +439,9 @@ def download_business_report(dt):
                 login_data.update({input.attrs['name']: input.attrs['value']})
 
         # login
-        s.post(action, data=login_data, headers=headers)
+        r = s.post(action, data=login_data, headers=headers)
+        if r.url == 'https://sellercentral.amazon.co.uk/merchant-picker/status':
+            s.get(url='https://sellercentral.amazon.co.uk/merchant-picker/status/skip-2sv', headers=headers)
 
         report_url = 'https://sellercentral.amazon.co.uk/gp/site-metrics/load/csv/BusinessReport-%s.csv' % ds
         headers.update({
