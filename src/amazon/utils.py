@@ -503,8 +503,7 @@ def check_avg_usp(dt):
             item = Item.objects.get(asin1=i.child_asin)
             if i.unit_session_percentage < item.avg_unit_session_percentage:
                 diff = item.avg_unit_session_percentage - i.unit_session_percentage
-                diff_percent = diff / item.avg_unit_session_percentage * 100.0
-                if diff_percent > 10.0:
+                if diff > 10.0:
                     warning.append(
                         'unit session percentage drops more than 10%s current is %.2f%s (the avg is %.2f%s)' % (
                         '%', i.unit_session_percentage, '%', item.avg_unit_session_percentage, '%'))
