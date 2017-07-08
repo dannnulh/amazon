@@ -514,4 +514,4 @@ def check_avg_usp(dt):
             text = 'Unit Session Percentage Alert\n```Date:%s\nItem:%s\nItem Link:%s\nReason:%s```' % (
                 dt, i.title, i.link, warning_string
             )
-            _send_slack_dm('dev-dan-alerts', text)
+            #_send_slack_dm('dev-dan-alerts', text)
