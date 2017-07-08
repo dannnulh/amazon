@@ -48,9 +48,8 @@ redis>=2.10.5
 celery==3.1.25
 
 
-
-
 # Your custom requirements go here
 python-amazon-mws
 lxml
 python-dateutil
+BeautifulSoup4
