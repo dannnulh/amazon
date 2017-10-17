@@ -1,7 +1,10 @@
 import StringIO
 import csv
 import datetime
+import json
+
 import requests
+from dateutil import parser
 from requests import session
 from bs4 import BeautifulSoup
 from django.conf import settings
@@ -11,7 +14,7 @@ from time import sleep
 from mws import mws
 from dateutil import parser as dateparser
 
-from .models import Item, Review, DetailPageSalesTraffic, Cookie
+from .models import Item, Review, DetailPageSalesTraffic, Order
 
 
 def _get_float(value, default=None):
@@ -272,6 +275,65 @@ def parse_top_critical_review(asin):
     return review_dict
 
 
+class NewOrders(mws.Orders):
+    URI = "/Orders/2013-09-01"
+    VERSION = "2013-09-01"
+    NS = '{https://mws.amazonservices.com/Orders/2013-09-01}'
+
+
+def get_orders(created_after, create_before=None):
+    orders = []
+    x = NewOrders(access_key=settings.MWS_ACCESS_KEY, secret_key=settings.MWS_SECRET_KEY,
+                  account_id=settings.MWS_ACCOUNT_ID, region='UK')
+
+    resp = x.list_orders(marketplaceids=settings.MARKETPLACEIDS, created_after=created_after,
+                         created_before=create_before)
+    data = resp.parsed
+    for order in data['Orders']['Order']:
+        orders.append(order)
+
+    if data.get('NextToken', None) is not None:
+        _get_orders_by_next_token(x, data['NextToken']['value'], orders)
+
+    return orders
+
+
+def save_orders(orders):
+    for o in orders:
+        aoid = o['AmazonOrderId']['value']
+        try:
+            order = Order.objects.get(AmazonOrderId=aoid)
+            order.PurchaseDate = parser.parse(o['PurchaseDate']['value'])
+            order.OrderStatus = o['OrderStatus']['value']
+            order.MarketplaceId = o['MarketplaceId']['value']
+            order.BuyerEmail = o.get('BuyerEmail', {'value': None})['value']
+            order.BuyerName = o.get('BuyerName', {'value': None})['value']
+            order.OrderType = o['OrderType']['value']
+            order.data = json.dumps(o)
+        except Order.DoesNotExist:
+            order = Order(
+                AmazonOrderId=aoid,
+                PurchaseDate=parser.parse(o['PurchaseDate']['value']),
+                OrderStatus=o['OrderStatus']['value'],
+                MarketplaceId=o['MarketplaceId']['value'],
+                BuyerEmail=o.get('BuyerEmail', {'value': None})['value'],
+                BuyerName=o.get('BuyerName', {'value': None})['value'],
+                OrderType=o['OrderType']['value'],
+                data=json.dumps(o)
+            )
+        order.save()
+
+
+def _get_orders_by_next_token(x, token, orders):
+    sleep(10)
+    resp = x.list_orders_by_next_token(token)
+    data = resp.parsed
+    for order in data['Orders']['Order']:
+        orders.append(order)
+    if data.get('NextToken', None) is not None:
+        _get_orders_by_next_token(x, data['NextToken']['value'], orders)
+
+
 def get_items():
     x = mws.Reports(access_key=settings.MWS_ACCESS_KEY, secret_key=settings.MWS_SECRET_KEY,
                     account_id=settings.MWS_ACCOUNT_ID, region='UK')
@@ -324,7 +386,7 @@ def get_item_new_reviews(item):
 
             if critical_review.send_notification == False:
                 text = _generate_slack_text(critical_review)
-                #_send_slack_dm('dev-dan-alerts', text)
+                # _send_slack_dm('dev-dan-alerts', text)
                 critical_review.send_notification = True
                 critical_review.save()
 
@@ -392,11 +454,6 @@ def _save_sales_traffic_data(dt, reader):
             total_order_items=_get_int(row[11])
         )
         dpst.save()
-
-
-def _get_cookie():
-    cookie = Cookie.objects.all()[0]
-    return cookie.content
 
 
 def download_business_report(dt):
@@ -506,7 +563,7 @@ def check_avg_usp(dt):
                 if diff > 10.0:
                     warning.append(
                         'unit session percentage drops more than 10%s current is %.2f%s (the avg is %.2f%s)' % (
-                        '%', i.unit_session_percentage, '%', item.avg_unit_session_percentage, '%'))
+                            '%', i.unit_session_percentage, '%', item.avg_unit_session_percentage, '%'))
         except Item.DoesNotExist:
             pass
         if warning:
@@ -514,4 +571,4 @@ def check_avg_usp(dt):
             text = 'Unit Session Percentage Alert\n```Date:%s\nItem:%s\nItem Link:%s\nReason:%s```' % (
                 dt, i.title, i.link, warning_string
             )
-            #_send_slack_dm('dev-dan-alerts', text)
+            # _send_slack_dm('dev-dan-alerts', text)

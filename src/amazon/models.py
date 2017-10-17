@@ -88,5 +88,15 @@ class DetailPageSalesTraffic(TimeStampedModel):
         return u'https://www.amazon.co.uk/dp/%s' % self.child_asin
 
 
-class Cookie(TimeStampedModel):
-    content = models.TextField()
+class Order(TimeStampedModel):
+    AmazonOrderId = models.CharField(max_length=255, db_index=True)
+    PurchaseDate = models.DateTimeField()
+    OrderStatus = models.CharField(max_length=255)
+    MarketplaceId = models.CharField(max_length=255)
+    BuyerEmail = models.EmailField(max_length=255, null=True)
+    BuyerName = models.CharField(max_length=255, null=True)
+    OrderType = models.CharField(max_length=255)
+    data = models.TextField()
+
+    def __unicode__(self):
+        return u'%s' % (self.AmazonOrderId)

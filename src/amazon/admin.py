@@ -1,11 +1,12 @@
 from django.contrib import admin
 
-from .models import Item, Review, DetailPageSalesTraffic, Cookie
+from .models import Item, Review, DetailPageSalesTraffic, Order
 
 
 @admin.register(Item)
 class ItemAdmin(admin.ModelAdmin):
-    list_display = ('id', 'asin1', 'item_name', 'top_critical_review_id', 'avg_unit_session_percentage', 'created', 'modified')
+    list_display = (
+    'id', 'asin1', 'item_name', 'top_critical_review_id', 'avg_unit_session_percentage', 'created', 'modified')
     search_fields = ['item_name', 'asin1']
 
 
@@ -23,6 +24,7 @@ class DetailPageSalesTrafficAdmin(admin.ModelAdmin):
                     'ordered_product_sales', 'currency', 'total_order_items', 'created', 'modified')
 
 
-@admin.register(Cookie)
-class CookieAdmin(admin.ModelAdmin):
-    list_display = ('id', 'content', 'created', 'modified')
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = (
+    'id', 'AmazonOrderId', 'PurchaseDate', 'OrderStatus', 'MarketplaceId', 'BuyerEmail', 'BuyerName', 'OrderType')

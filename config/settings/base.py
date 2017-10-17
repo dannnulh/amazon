@@ -280,7 +280,16 @@ ADMIN_URL = r'^admin/'
 
 # Your common stuff: Below this line define 3rd party library settings
 # ------------------------------------------------------------------------------
+
 MWS_ACCESS_KEY = env('MWS_ACCESS_KEY')
 MWS_SECRET_KEY= env('MWS_SECRET_KEY')
 MWS_ACCOUNT_ID = env('MWS_ACCOUNT_ID')
 SLACK_TOKEN = env('SLACK_TOKEN')
+
+MARKETPLACEIDS = [
+        'A1F83G8C2ARO7P',
+        'A1PA6795UKMFR9',
+        'A1RKKUPIHCS9HS',
+        'A13V1IB3VIYZZH',
+        'APJ6JRA9NG5V4',
+    ]
