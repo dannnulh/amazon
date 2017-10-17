@@ -325,7 +325,7 @@ def save_orders(orders):
 
 
 def _get_orders_by_next_token(x, token, orders):
-    sleep(10)
+    sleep(20)
     resp = x.list_orders_by_next_token(token)
     data = resp.parsed
     for order in data['Orders']['Order']:
