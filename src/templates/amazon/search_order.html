@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Search Amazon Order{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="row">
+    <div class="col-sm-12">
+
+      <form action="." method="post" class="form-inline">
+        {% csrf_token %}
+        <div class="form-group mx-sm-3">
+          <label for="amazon_order_id" class="sr-only">Amazon Order ID</label>
+          <input type="text" class="form-control" id="amazon_order_id" name="amazon_order_id" value="{{amazon_order_id|default_if_none:'' }}">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Search</button>
+      </form>
+
+    </div>
+  </div>
+
+  {% if order %}
+  <div class="row">
+    <div class="col-sm-12">
+      Order ID: # {{ order.AmazonOrderId }}
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-sm-8">
+      <table class="table table-striped table-bordered">
+        <tr>
+          <td>Shipping service</td>
+          <td>{{ order.json_data.ShipmentServiceLevelCategory.value }}</td>
+        </tr>
+        <tr>
+          <td>Ship by</td>
+          <td>{{ order.json_data.LatestShipDate.value }}</td>
+        </tr>
+        <tr>
+          <td>Deliver by</td>
+          <td>{{ order.json_data.EarliestDeliveryDate.value }}</td>
+        </tr>
+        <tr>
+          <td>Ship to</td>
+          <td>
+            {{ order.json_data.ShippingAddress.Name.value }} <br/>
+            {{ order.json_data.ShippingAddress.AddressLine1.value }} <br/>
+            {{ order.json_data.ShippingAddress.City.value }} <br/>
+            {{ order.json_data.ShippingAddress.StateOrRegion.value }} <br/>
+            {{ order.json_data.ShippingAddress.PostalCode.value }} <br/>
+            {{ order.json_data.ShippingAddress.CountryCode.value }} <br/>
+            Phone: {{ order.json_data.ShippingAddress.Phone.value }} <br/>
+          </td>
+        </tr>
+        <tr>
+          <td>Purchase date</td>
+          <td>{{ order.json_data.PurchaseDate.value }}</td>
+        </tr>
+        <tr>
+          <td>Fulfilment</td>
+          <td>Seller</td>
+        </tr>
+        <tr>
+          <td>Sales channel</td>
+          <td>{{ order.json_data.SalesChannel.value }}</td>
+        </tr>
+        <tr>
+          <td>Contact Buyer</td>
+          <td>{{ order.BuyerName }}</td>
+        </tr>
+      </table>
+    </div>
+    <div class="col-sm-4">
+      Ship by {{ order.json_data.LatestShipDate.value }}
+      <table class="table table-bordered">
+        <tr>
+          <td>Items total</td>
+          <td>{{ order.json_data.OrderTotal.Amount.value }} {{ order.json_data.OrderTotal.CurrencyCode.value }}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="row">
+    <table class="table table-bordered">
+      <thead class="thead-light">
+      <tr>
+        <th>Status</th>
+        <th>Quantity ordered</th>
+        <th>Quantity shipped</th>
+        <th>Product Details</th>
+        <th>Unit price</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for item in order.items_data %}
+      <tr>
+        <td>{{ order.OrderStatus }}</td>
+        <td>{{ item.QuantityOrdered.value }}</td>
+        <td>{{ item.QuantityShipped.value }}</td>
+        <td>
+          {{ item.Title.value }} <br/>
+          SKU: {{ item.SellerSKU.value }} <br/>
+          ASIN: {{ item.ASIN.value }} <br/>
+          Condition: {{ item.ConditionId.value }} <br/>
+          Order Item ID: {{ item.OrderItemId.value }} <br/>
+        </td>
+        <td>{{ item.ItemPrice.Amount.value }} {{ item.ItemPrice.CurrencyCode.value }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div><h3>Cannot find the order {{ amazon_order_id }}</h3></div>
+  {% endif %}
+
+
+</div>
+{% endblock content %}
+

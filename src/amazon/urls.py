@@ -8,4 +8,5 @@ from . import views
 urlpatterns = [
     url(r'^get_items/$', views.get_items, name='get_items'),
     url(r'^get_reviews/$', views.get_reviews, name='get_reviews'),
+    url(r'^search_order/$', views.search_order, name='search_order'),
 ]

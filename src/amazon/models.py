@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+import json
 from django.db import models
 
 from model_utils.models import TimeStampedModel
@@ -97,6 +98,15 @@ class Order(TimeStampedModel):
     BuyerName = models.CharField(max_length=255, null=True)
     OrderType = models.CharField(max_length=255)
     data = models.TextField()
+    items = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
         return u'%s' % (self.AmazonOrderId)
+
+    @property
+    def json_data(self):
+        return json.loads(self.data)
+
+    @property
+    def items_data(self):
+        return json.loads(self.items)

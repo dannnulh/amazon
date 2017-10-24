@@ -281,6 +281,62 @@ class NewOrders(mws.Orders):
     NS = '{https://mws.amazonservices.com/Orders/2013-09-01}'
 
 
+def get_save_order(amazon_order_id):
+    try:
+        order = Order.objects.get(AmazonOrderId=amazon_order_id)
+        return order
+    except Order.DoesNotExist:
+        orders = get_orders_by_ids(amazon_order_ids=[amazon_order_id])
+        if orders:
+            order_json = orders[0]
+            items = get_order_items(amazon_order_id)
+            order = _save_order(order_json)
+            order.items = json.dumps(items)
+            order.save()
+            return order
+    return None
+
+
+def get_orders_by_ids(amazon_order_ids):
+    orders = []
+    x = NewOrders(access_key=settings.MWS_ACCESS_KEY, secret_key=settings.MWS_SECRET_KEY,
+                  account_id=settings.MWS_ACCOUNT_ID, region='UK')
+
+    resp = x.get_order(amazon_order_ids=amazon_order_ids)
+    data = resp.parsed
+    if data['Orders']:
+        if isinstance(data['Orders']['Order'], list):
+            for order in data['Orders']['Order']:
+                orders.append(order)
+
+            if data.get('NextToken', None) is not None:
+                _get_orders_by_next_token(x, data['NextToken']['value'], orders)
+        else:
+            orders.append(data['Orders']['Order'])
+
+    return orders
+
+
+def get_order_items(amazon_order_id):
+    items = []
+    x = NewOrders(access_key=settings.MWS_ACCESS_KEY, secret_key=settings.MWS_SECRET_KEY,
+                  account_id=settings.MWS_ACCOUNT_ID, region='UK')
+
+    resp = x.list_order_items(amazon_order_id=amazon_order_id)
+    data = resp.parsed
+    if data['OrderItems']:
+        if isinstance(data['OrderItems']['OrderItem'], list):
+            for item in data['OrderItems']['OrderItem']:
+                items.append(item)
+
+            if data.get('NextToken', None) is not None:
+                _get_order_items_by_next_token(x, data['NextToken']['value'], items)
+        else:
+            items.append(data['OrderItems']['OrderItem'])
+
+    return items
+
+
 def get_orders(created_after, create_before=None):
     orders = []
     x = NewOrders(access_key=settings.MWS_ACCESS_KEY, secret_key=settings.MWS_SECRET_KEY,
@@ -289,49 +345,76 @@ def get_orders(created_after, create_before=None):
     resp = x.list_orders(marketplaceids=settings.MARKETPLACEIDS, created_after=created_after,
                          created_before=create_before)
     data = resp.parsed
-    for order in data['Orders']['Order']:
-        orders.append(order)
+    if data['Orders']:
+        if isinstance(data['Orders']['Order'], list):
+            for order in data['Orders']['Order']:
+                orders.append(order)
 
-    if data.get('NextToken', None) is not None:
-        _get_orders_by_next_token(x, data['NextToken']['value'], orders)
-
+            if data.get('NextToken', None) is not None:
+                _get_orders_by_next_token(x, data['NextToken']['value'], orders)
+        else:
+            orders.append(data['Orders']['Order'])
     return orders
 
 
 def save_orders(orders):
-    for o in orders:
-        aoid = o['AmazonOrderId']['value']
-        try:
-            order = Order.objects.get(AmazonOrderId=aoid)
-            order.PurchaseDate = parser.parse(o['PurchaseDate']['value'])
-            order.OrderStatus = o['OrderStatus']['value']
-            order.MarketplaceId = o['MarketplaceId']['value']
-            order.BuyerEmail = o.get('BuyerEmail', {'value': None})['value']
-            order.BuyerName = o.get('BuyerName', {'value': None})['value']
-            order.OrderType = o['OrderType']['value']
-            order.data = json.dumps(o)
-        except Order.DoesNotExist:
-            order = Order(
-                AmazonOrderId=aoid,
-                PurchaseDate=parser.parse(o['PurchaseDate']['value']),
-                OrderStatus=o['OrderStatus']['value'],
-                MarketplaceId=o['MarketplaceId']['value'],
-                BuyerEmail=o.get('BuyerEmail', {'value': None})['value'],
-                BuyerName=o.get('BuyerName', {'value': None})['value'],
-                OrderType=o['OrderType']['value'],
-                data=json.dumps(o)
-            )
+    for order_json in orders:
+        _save_order(order_json)
+
+
+def _save_order(order_json):
+    aoid = order_json['AmazonOrderId']['value']
+    try:
+        order = Order.objects.get(AmazonOrderId=aoid)
+        order.PurchaseDate = parser.parse(order_json['PurchaseDate']['value'])
+        order.OrderStatus = order_json['OrderStatus']['value']
+        order.MarketplaceId = order_json['MarketplaceId']['value']
+        order.BuyerEmail = order_json.get('BuyerEmail', {'value': None})['value']
+        order.BuyerName = order_json.get('BuyerName', {'value': None})['value']
+        order.OrderType = order_json['OrderType']['value']
+        order.data = json.dumps(order_json)
+    except Order.DoesNotExist:
+        order = Order(
+            AmazonOrderId=aoid,
+            PurchaseDate=parser.parse(order_json['PurchaseDate']['value']),
+            OrderStatus=order_json['OrderStatus']['value'],
+            MarketplaceId=order_json['MarketplaceId']['value'],
+            BuyerEmail=order_json.get('BuyerEmail', {'value': None})['value'],
+            BuyerName=order_json.get('BuyerName', {'value': None})['value'],
+            OrderType=order_json['OrderType']['value'],
+            data=json.dumps(order_json)
+        )
         order.save()
+    return order
+
+
+def _get_order_items_by_next_token(x, token, items):
+    sleep(30)
+    resp = x.list_order_items_by_next_token(token)
+    data = resp.parsed
+    if data['OrderItems']:
+        if isinstance(data['OrderItems']['OrderItem'], list):
+            for item in data['OrderItems']['OrderItem']:
+                items.append(item)
+            if data.get('NextToken', None) is not None:
+                _get_orders_by_next_token(x, data['NextToken']['value'], items)
+        else:
+            items.append(data['OrderItems']['OrderItem'])
 
 
 def _get_orders_by_next_token(x, token, orders):
     sleep(30)
     resp = x.list_orders_by_next_token(token)
     data = resp.parsed
-    for order in data['Orders']['Order']:
-        orders.append(order)
-    if data.get('NextToken', None) is not None:
-        _get_orders_by_next_token(x, data['NextToken']['value'], orders)
+    if data['Orders']:
+        if isinstance(data['Orders']['Order'], list):
+            for order in data['Orders']['Order']:
+                orders.append(order)
+
+            if data.get('NextToken', None) is not None:
+                _get_orders_by_next_token(x, data['NextToken']['value'], orders)
+        else:
+            orders.append(data['Orders']['Order'])
 
 
 def get_items():
