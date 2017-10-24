@@ -21,7 +21,7 @@
 
     </div>
   </div>
-
+  {% if amazon_order_id %}
   {% if order %}
   <div class="row">
     <div class="col-sm-12">
@@ -116,7 +116,10 @@
     </table>
   </div>
   {% else %}
-  <div><h3>Cannot find the order {{ amazon_order_id }}</h3></div>
+  <div>
+    <h3>Cannot find the order {{ amazon_order_id }}</h3>
+  </div>
+  {% endif %}
   {% endif %}
 
 
